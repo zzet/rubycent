@@ -10,14 +10,15 @@ module Centrifuge
 
     def process
       body = { data: json(method, data) }
-      body.merge!(sign: client.sign(body[:data]))
-      Centrifuge::Request.new(client.client, 'POST', client.url, nil, body).send
+      body[:sign] = client.sign(body[:data])
+
+      Centrifuge::Request.new(client.client, 'POST', client.url, nil, body, client.headers).send
     end
 
     private
 
     def json(method, params)
-      MultiJson.dump({ method: method, params: params })
+      MultiJson.dump(method: method, params: params)
     end
   end
 end

@@ -7,36 +7,44 @@ module Centrifuge
     DEFAULT_OPTIONS = {
       scheme: 'http',
       host: 'localhost',
-      port: 8000,
+      port: 8000
     }
-    attr_accessor :scheme, :host, :port, :secret
+    attr_accessor :scheme, :host, :port, :secret, :api_key, :safety
     attr_writer :connect_timeout, :send_timeout, :receive_timeout,
-    :keep_alive_timeout
+      :keep_alive_timeout
 
     ## CONFIGURATION ##
 
     def initialize(options = {})
       options = DEFAULT_OPTIONS.merge(options)
-      @scheme, @host, @port, @secret = options.values_at(
-       :scheme, :host, :port, :secret
+      @scheme, @host, @port, @secret, @api_key = options.values_at(
+        :scheme, :host, :port, :secret, :api_key
       )
-      set_default_timeouts
+      set_defaults
     end
 
-    def set_default_timeouts
+    def set_defaults
       @connect_timeout = 5
       @send_timeout = 5
       @receive_timeout = 5
       @keep_alive_timeout = 30
+      @safety = true
+    end
+
+    def headers
+      {
+        'Content-type' => 'application/json',
+        'Authorization' => "apikey #{api_key}"
+      }
     end
 
     def url(path = nil)
-      URI::Generic.build({
+      URI::Generic.build(
         scheme: scheme.to_s,
         host: host,
         port: port,
-        path: "/api/#{path}"
-      })
+        path: ['/api', path].join('/')
+      )
     end
 
     def broadcast(channels, data)
@@ -59,16 +67,24 @@ module Centrifuge
       Centrifuge::Builder.new('presence', { channel: channel }, self).process
     end
 
+    def presence_stats(channel)
+      Centrifuge::Builder.new('presence_stats', { channel: channel }, self).process
+    end
+
     def history(channel)
       Centrifuge::Builder.new('history', { channel: channel }, self).process
+    end
+
+    def history_remove(channel)
+      Centrifuge::Builder.new('history_remove', { channel: channel }, self).process
     end
 
     def channels()
       Centrifuge::Builder.new('channels', {}, self).process
     end
 
-    def stats()
-      Centrifuge::Builder.new('stats', {}, self).process
+    def info()
+      Centrifuge::Builder.new('info', {}, self).process
     end
 
     def token_for(user, timestamp, user_info = "")
@@ -86,13 +102,13 @@ module Centrifuge
 
     def client
       @client ||= begin
-        HTTPClient.new.tap do |http|
-          http.connect_timeout = @connect_timeout
-          http.send_timeout = @send_timeout
-          http.receive_timeout = @receive_timeout
-          http.keep_alive_timeout = @keep_alive_timeout
-        end
-      end
+                    HTTPClient.new.tap do |http|
+                      http.connect_timeout = @connect_timeout
+                      http.send_timeout = @send_timeout
+                      http.receive_timeout = @receive_timeout
+                      http.keep_alive_timeout = @keep_alive_timeout
+                    end
+                  end
     end
 
   end
