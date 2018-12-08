@@ -43,7 +43,7 @@ module Centrifuge
         scheme: scheme.to_s,
         host: host,
         port: port,
-        path: ['/api', path].join('/')
+        path: ['/api', path].compact.join('/')
       )
     end
 
