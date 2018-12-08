@@ -1,5 +1,6 @@
 require 'multi_json'
 require 'httpclient'
+require 'jwt'
 require 'centrifuge/builder'
 
 module Centrifuge
@@ -79,25 +80,26 @@ module Centrifuge
       Centrifuge::Builder.new('history_remove', { channel: channel }, self).process
     end
 
-    def channels()
+    def channels
       Centrifuge::Builder.new('channels', {}, self).process
     end
 
-    def info()
+    def info
       Centrifuge::Builder.new('info', {}, self).process
     end
 
-    def token_for(user, timestamp, user_info = "")
-      sign("#{user}#{timestamp}#{user_info}")
+    def token_for(user, exp = nil, info = {}, algorithm = 'HS256')
+      payload = { 'sub' => user, 'info' => info }
+      payload['exp'] = exp if exp
+
+      JWT.encode payload, secret, algorithm
     end
 
-    def generate_channel_sign(client, channel, user_info="")
-      data = "#{client}#{channel}#{user_info}"
-      OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, secret, data)
-    end
+    def generate_channel_sign(client, channel, info = {}, exp = nil, algorithm = 'HS256')
+      payload = { 'client' => client, 'channel' => channel, 'info' => info }
+      payload['exp'] = exp if exp
 
-    def sign(body)
-      OpenSSL::HMAC.hexdigest(OpenSSL::Digest::SHA256.new, secret, body)
+      JWT.encode payload, secret, algorithm
     end
 
     def client
@@ -110,6 +112,5 @@ module Centrifuge
                     end
                   end
     end
-
   end
 end
