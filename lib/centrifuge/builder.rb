@@ -9,8 +9,7 @@ module Centrifuge
     end
 
     def process
-      body = { data: json(method, data) }
-
+      body = json(method, data)
       Centrifuge::Request.new(client.client, 'POST', client.url, nil, body, client.headers).send
     end
 
